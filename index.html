@@ -237,50 +237,65 @@
         const db = getFirestore(app);
         const colRef = collection(db, "demandas");
 
-        // CONFIG CLOUDINARY (ATENÇÃO: Mude o seu CLOUD_NAME aqui!)
-        const CLOUD_NAME = "fr-controle"; // <-- COLOQUE SEU CLOUD NAME AQUI
-        const UPLOAD_PRESET = "fr_controle";
+       // --- CONFIGURAÇÃO CLOUDINARY CORRIGIDA ---
+const CLOUD_NAME = "fr-controle"; 
+const UPLOAD_PRESET = "fr_controle"; // Note o "_" conforme sua configuração
 
-        window.tickets = [];
-        window.currentTicketId = null;
-        window.activeTab = 'active';
+window.handleUpload = async (input) => {
+    const file = input.files[0];
+    if(!file) return;
 
-        // --- UPLOAD HANDLER ---
-        window.handleUpload = async (input) => {
-            const file = input.files[0];
-            if(!file) return;
+    const t = window.tickets.find(x => x.id === window.currentTicketId);
+    if(!t) return;
 
-            const t = window.tickets.find(x => x.id === window.currentTicketId);
-            if(!t) return;
+    // Mostrar barra de carregamento
+    const statusEl = document.getElementById('upload-status');
+    statusEl.innerText = "ENVIANDO ARQUIVO...";
+    statusEl.classList.remove('hidden', 'bg-red-500');
+    statusEl.classList.add('bg-emerald-500');
 
-            document.getElementById('upload-status').classList.remove('hidden');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
 
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('upload_preset', UPLOAD_PRESET);
+    try {
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
+            method: 'POST',
+            body: formData
+        });
 
-            try {
-                const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-                
-                const fileLink = `📎 **Anexo enviado:** [${file.name}](${data.secure_url})`;
-                const upds = [{ time: new Date().toLocaleString(), text: fileLink }, ...(t.updates || [])];
-                
-                await updateDoc(doc(db, "demandas", t.id), { 
-                    updates: upds, 
-                    lastUpdate: serverTimestamp() 
-                });
-                
-            } catch (err) {
-                alert("Erro no upload: " + err.message);
-            } finally {
-                document.getElementById('upload-status').classList.add('hidden');
-                input.value = '';
-            }
-        };
+        const data = await response.json();
+
+        // Verificação se o Cloudinary retornou o link com sucesso
+        if (data.secure_url) {
+            const fileLink = `📎 **Anexo enviado:** [${file.name}](${data.secure_url})`;
+            const upds = [{ time: new Date().toLocaleString(), text: fileLink }, ...(t.updates || [])];
+            
+            // Grava no Firebase
+            const { updateDoc, doc, serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js");
+            await updateDoc(doc(db, "demandas", t.id), { 
+                updates: upds, 
+                lastUpdate: serverTimestamp() 
+            });
+            
+            statusEl.classList.add('hidden');
+        } else {
+            // Se cair aqui, o Cloudinary recusou o arquivo (ex: preset errado)
+            console.error("Erro Cloudinary:", data);
+            statusEl.innerText = "ERRO: " + (data.error ? data.error.message : "Falha no upload");
+            statusEl.classList.replace('bg-emerald-500', 'bg-red-500');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+        
+    } catch (err) {
+        console.error("Erro na requisição:", err);
+        statusEl.innerText = "ERRO DE CONEXÃO";
+        statusEl.classList.replace('bg-emerald-500', 'bg-red-500');
+        setTimeout(() => statusEl.classList.add('hidden'), 5000);
+    } finally {
+        input.value = ''; // Limpa o seletor de arquivos
+    }
+};
 
         // --- CORE LOGIC ---
         window.switchTab = (tab) => {
