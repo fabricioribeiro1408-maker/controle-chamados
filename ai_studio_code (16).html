@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-br" id="app-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FR - Controle de Demandas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { darkBg: '#020617', darkCard: '#0f172a' } } }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s ease; overflow-x: hidden; }
+        .priority-col { min-height: 65vh; border-radius: 20px; padding: 12px; background: rgba(0,0,0,0.02); border: 1px dashed rgba(0,0,0,0.1); }
+        .tab-active { border-bottom: 4px solid #10b981; color: #10b981; font-weight: 800; }
+        .glass-modal { backdrop-filter: blur(12px); background-color: rgba(0, 0, 0, 0.6); display: none; z-index: 50; position: fixed; inset: 0; align-items: center; justify-content: center; }
+        .glass-modal.active { display: flex; }
+        .break-word { word-break: break-all; overflow-wrap: anywhere; white-space: pre-wrap; }
+
+        /* Animações de Login */
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        @keyframes scan { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+        .animate-scan { position: relative; overflow: hidden; }
+        .animate-scan::after { content: ""; position: absolute; left: 0; width: 100%; height: 2px; background: #10b981; animation: scan 3s infinite linear; box-shadow: 0 0 10px #10b981; }
+        .pulse-effect { animation: pulse-green 2s infinite; }
+
+        @keyframes siren { 0%, 100% { background-color: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); } 50% { background-color: rgba(220, 38, 38, 0.9); border-color: #ff0000; color: white; } }
+        .animate-siren { animation: siren 2s infinite ease-in-out; }
+
+        .card-suporte { background-color: #ffffff; border-color: #e2e8f0; border-left: 6px solid #10b981; }
+        .card-validacao { background-color: #fefce8; border-color: #fef08a; border-left: 6px solid #eab308; }
+        .card-dependente { background-color: #f0f9ff; border-color: #bae6fd; border-left: 6px solid #0ea5e9; }
+        .card-reincidente { border: 3px solid #ef4444 !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
+
+        .dark .card-suporte { background-color: #1e293b; border-color: #334155; }
+        .dark .card-validacao { background-color: #422006; border-color: #713f12; }
+        .dark .card-dependente { background-color: #082f49; border-color: #075985; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-darkBg text-slate-800 dark:text-slate-100">
+
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-emerald-950 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-darkCard w-full max-w-md rounded-[40px] shadow-2xl p-10 text-center border-b-8 border-emerald-500 relative overflow-hidden">
+            <div class="w-24 h-24 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 pulse-effect animate-scan">
+                <i class="fas fa-fingerprint"></i>
+            </div>
+            <h1 class="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">FR-Controle</h1>
+            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-2 mb-8 italic">Secure Access Terminal</p>
+            
+            <div class="space-y-4">
+                <input type="text" id="login-user" class="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none focus:ring-2 ring-emerald-500 font-bold transition-all" placeholder="Usuário">
+                <input type="password" id="login-pass" class="w-full p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl outline-none focus:ring-2 ring-emerald-500 font-bold transition-all" placeholder="Senha">
+                <button id="btn-login" class="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg">Autenticar</button>
+            </div>
+            <p id="login-error" class="text-red-500 text-[10px] mt-4 font-black hidden">ACESSO NEGADO</p>
+            
+            <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
+                <p class="text-slate-400 text-[9px] font-black uppercase tracking-widest italic">Desenvolvido por Fabricio Ribeiro</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD APP -->
+    <div id="main-app" class="hidden">
+        <header class="p-5 bg-white dark:bg-darkCard border-b border-emerald-100 dark:border-slate-800 sticky top-0 z-40 shadow-sm transition-colors">
+            <div class="max-w-[1800px] mx-auto flex flex-col lg:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <button id="btn-dark" class="text-xl p-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shadow-sm">
+                        <i id="dark-icon" class="fas fa-moon text-emerald-600"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-black tracking-tighter text-emerald-700 dark:text-emerald-400 uppercase italic">FR - Controle</h1>
+                        <div class="flex gap-4 mt-1 font-black">
+                            <button id="tab-active" onclick="switchTab('active')" class="tab-active py-1 px-2 uppercase text-[10px] tracking-widest">Atividade</button>
+                            <button id="tab-post" onclick="switchTab('post')" class="py-1 px-2 uppercase text-[10px] tracking-widest text-slate-400">Pós-Atendimento</button>
+                            <button id="tab-completed" onclick="switchTab('completed')" class="py-1 px-2 uppercase text-[10px] tracking-widest text-slate-400">Concluídos</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <input type="text" id="search-input" oninput="renderTickets()" placeholder="Pesquisar..." class="bg-slate-100 dark:bg-slate-800 border-none rounded-xl py-2 px-4 text-xs focus:ring-2 ring-emerald-500 outline-none w-48 font-bold">
+                    <select id="filter-level" onchange="renderTickets()" class="bg-slate-100 dark:bg-slate-800 border-none rounded-xl p-2 text-xs font-black text-emerald-700 dark:text-emerald-400 outline-none cursor-pointer">
+                        <option value="ALL">Todos Níveis</option><option value="N1">Nível 1</option><option value="N2">Nível 2</option><option value="N3">Nível 3</option>
+                    </select>
+                    <button onclick="prepareNewTicket()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-black shadow-lg text-xs uppercase tracking-tighter">Novo</button>
+                    <button onclick="handleLogout()" class="text-slate-400 hover:text-red-500 p-2"><i class="fas fa-power-off"></i></button>
+                </div>
+            </div>
+        </header>
+
+        <main class="p-6 max-w-[1800px] mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                <div class="bg-white dark:bg-darkCard p-4 rounded-3xl border dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-2xl flex items-center justify-center font-black text-xl">A</div>
+                    <div><p class="text-[10px] font-black text-slate-400 uppercase">Ativas</p><p id="count-active" class="text-2xl font-black">0</p></div>
+                </div>
+                <div id="kpi-no-update" class="bg-white dark:bg-darkCard p-4 rounded-3xl border dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div id="kpi-no-update-icon" class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"><i class="fas fa-comment-slash"></i></div>
+                    <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Sem Resposta > 4h</p><p id="count-no-update" class="text-2xl font-black">0</p></div>
+                </div>
+                <div id="kpi-reincidente" class="bg-white dark:bg-darkCard p-4 rounded-3xl border dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div id="kpi-reincidente-icon" class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl"><i class="fas fa-redo"></i></div>
+                    <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Reincidentes</p><p id="count-reincidente" class="text-2xl font-black">0</p></div>
+                </div>
+                <div id="kpi-post" class="bg-white dark:bg-darkCard p-4 rounded-3xl border dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div id="kpi-post-icon" class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-black">P</div>
+                    <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Pós-Atend.</p><p id="count-post" class="text-2xl font-black">0</p></div>
+                </div>
+                <div class="bg-white dark:bg-darkCard p-4 rounded-3xl border dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-2xl flex items-center justify-center font-black text-xl">T</div>
+                    <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">TME Médio</p><p class="text-2xl font-black"><span id="tme-value">0</span><span class="text-xs ml-1 opacity-40 font-mono font-black">m</span></p></div>
+                </div>
+            </div>
+
+            <div id="view-active" class="grid grid-cols-1 lg:grid-cols-5 gap-4 overflow-x-auto pb-6">
+                <div class="priority-col border dark:border-slate-800"> <div class="text-red-600 font-black italic mb-4 text-[10px] uppercase">⭐⭐⭐⭐⭐ Crítico</div> <div id="col-5" class="space-y-4"></div> </div>
+                <div class="priority-col border dark:border-slate-800"> <div class="text-orange-500 font-black italic mb-4 text-[10px] uppercase">⭐⭐⭐⭐ Alto</div> <div id="col-4" class="space-y-4"></div> </div>
+                <div class="priority-col border dark:border-slate-800"> <div class="text-emerald-600 font-black italic mb-4 text-[10px] uppercase">⭐⭐⭐ Médio</div> <div id="col-3" class="space-y-4"></div> </div>
+                <div class="priority-col border dark:border-slate-800"> <div class="text-blue-500 font-black italic mb-4 text-[10px] uppercase">⭐⭐ Baixo</div> <div id="col-2" class="space-y-4"></div> </div>
+                <div class="priority-col border dark:border-slate-800"> <div class="text-slate-400 font-black italic mb-4 text-[10px] uppercase">⭐ Mínimo</div> <div id="col-1" class="space-y-4"></div> </div>
+            </div>
+
+            <div id="view-post" class="hidden"><div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6" id="post-list"></div></div>
+
+            <div id="view-completed" class="hidden text-sm">
+                <div class="bg-white dark:bg-darkCard rounded-[32px] border dark:border-slate-800 overflow-hidden shadow-sm">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800 font-black text-slate-400 uppercase tracking-widest">
+                            <tr><th class="p-6">Empresa / Protocolo</th><th class="p-6">Causa</th><th class="p-6 text-center">Humor</th><th class="p-6">TME</th><th class="p-6">Conclusão</th></tr>
+                        </thead>
+                        <tbody id="completed-list"></tbody>
+                    </table>
+                </div>
+                <div class="mt-6 p-5 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl inline-block border border-emerald-100">
+                    <p class="text-xs font-black text-emerald-800 dark:text-emerald-400 uppercase">Total concluídos: <span id="total-completed-counter" class="text-2xl ml-2 font-black">0</span></p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL NOVO -->
+    <div id="modal-add" class="glass-modal" onclick="closeIfBlur(event)">
+        <div class="bg-white dark:bg-darkCard w-full max-w-2xl rounded-[40px] p-8 shadow-2xl overflow-y-auto max-h-[90vh]" onclick="event.stopPropagation()">
+            <h2 id="modal-title" class="text-2xl font-black text-emerald-800 dark:text-emerald-400 mb-6 uppercase italic">Registrar Demanda</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 text-left text-xs">
+                <div class="md:col-span-2"><label class="font-black uppercase text-slate-400 ml-1">Empresa</label><input id="in-empresa" type="text" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none focus:ring-2 ring-emerald-500 font-black"></div>
+                <div><label class="font-black uppercase text-slate-400 ml-1">Cliente</label><input id="in-cliente" type="text" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none"></div>
+                <div><label class="font-black uppercase text-slate-400 ml-1">Contato</label><input id="in-contato" type="text" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none"></div>
+                <div><label class="font-black uppercase text-slate-400 ml-1">Protocolo ou ID</label><input id="in-protocolo" type="text" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-mono font-bold"></div>
+                <div><label class="font-black uppercase text-slate-400 ml-1">Nível</label><select id="in-nivel" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none font-bold text-emerald-600"><option value="N1">Nível 1</option><option value="N2">Nível 2</option><option value="N3">Nível 3</option></select></div>
+                <div class="md:col-span-2"><label class="font-black uppercase text-slate-400 ml-1">Causa Raiz</label><input id="in-causa" type="text" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl outline-none"></div>
+                <div class="md:col-span-2"><label class="font-black uppercase text-slate-400 ml-1">Descrição Inicial</label><textarea id="in-problema" class="w-full p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl h-24 outline-none"></textarea></div>
+                <div class="flex items-center gap-4 bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-3xl md:col-span-2">
+                    <div class="flex-1 text-center border-r dark:border-slate-700 font-black uppercase"><p class="mb-2">Impacto</p><select id="in-stars" class="font-bold text-xl bg-transparent outline-none"><option value="5">⭐⭐⭐⭐⭐</option><option value="4">⭐⭐⭐⭐</option><option value="3" selected>⭐⭐⭐</option><option value="2">⭐⭐</option><option value="1">⭐</option></select></div>
+                    <div class="flex-1 text-center font-black uppercase"><p class="mb-2">Humor</p><select id="in-mood" class="text-2xl bg-transparent outline-none"><option value="😡">😡</option><option value="😟">😟</option><option value="😐" selected>😐</option><option value="🙂">🙂</option><option value="🤩">🤩</option></select></div>
+                </div>
+            </div>
+            <div class="flex gap-4 mt-8">
+                <button onclick="closeModal('modal-add')" class="flex-1 py-4 font-black text-slate-400 uppercase text-[10px]">Cancelar</button>
+                <button id="btn-save" class="flex-[2] py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALHES -->
+    <div id="modal-details" class="glass-modal" style="justify-content: flex-end;" onclick="closeIfBlur(event)">
+        <div class="bg-white dark:bg-darkCard w-full max-w-xl h-full shadow-2xl p-8 overflow-y-auto relative" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-start mb-6">
+                <div><span id="det-nivel" class="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[10px] font-black px-4 py-1 rounded-full uppercase"></span><h2 id="det-empresa" class="text-2xl font-black text-slate-900 dark:text-white mt-4 leading-tight uppercase break-word italic"></h2></div>
+                <div class="flex gap-2">
+                    <button id="btn-sync" onclick="renderDetailsContent()" class="text-emerald-500 hover:text-emerald-600 p-2 text-xl" title="Sincronizar"><i class="fas fa-sync-alt"></i></button>
+                    <button id="btn-edit-trigger" class="text-slate-300 hover:text-emerald-600 p-2 text-xl"><i class="fas fa-edit"></i></button>
+                    <button onclick="closeModal('modal-details')" class="text-slate-300 hover:text-red-500 p-2 text-3xl"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="space-y-6 mb-10">
+                <div id="status-setor-container" class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border dark:border-slate-800">
+                    <label class="text-[10px] font-black uppercase text-slate-400 ml-1 tracking-widest">Status da Demanda</label>
+                    <select id="det-status-setor" class="w-full p-3 mt-2 bg-white dark:bg-slate-900 border-2 dark:border-slate-700 rounded-xl font-bold outline-none ring-emerald-500 focus:ring-2">
+                        <option value="suporte">🛠️ Em análise suporte</option><option value="outros">⏳ Outros setores</option><option value="cliente">👤 Depende do cliente</option><option value="validacao">✅ Aguardando validação</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-1 gap-4 text-sm">
+                    <div class="bg-white dark:bg-slate-800/30 p-4 rounded-2xl border dark:border-slate-700 break-word"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Responsável / Contato</p><span id="det-cliente-contato" class="font-bold text-slate-600 dark:text-slate-300"></span></div>
+                    <div class="bg-white dark:bg-slate-800/30 p-4 rounded-2xl border dark:border-slate-700 break-word"><p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">ID / Causa</p><span id="det-protocolo-causa" class="font-bold text-emerald-600"></span></div>
+                </div>
+                <div class="bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-3xl italic text-slate-600 dark:text-slate-300 text-sm break-word border border-emerald-100 dark:border-emerald-900/30" id="det-problema"></div>
+            </div>
+            <h3 class="text-[10px] font-black uppercase text-slate-400 mb-4 flex items-center gap-2"><i class="fas fa-history"></i> Comentários</h3>
+            <div id="updates-list" class="space-y-4 mb-48 border-l-4 border-emerald-100 dark:border-emerald-900/30 ml-1 pl-6 break-word"></div>
+            
+            <div id="action-bar-details" class="fixed bottom-0 right-0 w-full max-w-xl bg-white dark:bg-darkCard p-6 border-t dark:border-slate-800 shadow-2xl">
+                <textarea id="new-update-text" placeholder="Adicionar comentário... [Texto](Link)" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl h-24 text-sm outline-none mb-4 ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-emerald-500"></textarea>
+                <div class="flex gap-3 text-[10px] font-black uppercase">
+                    <button id="btn-comment" class="flex-1 bg-slate-800 hover:bg-black text-white py-4 rounded-2xl shadow-lg transition-all active:scale-95">Comentar</button>
+                    <button id="btn-final-tec" onclick="openModal('modal-finalize')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-2xl shadow-lg transition-all">Finalizar</button>
+                    <div id="btn-group-post" class="hidden flex flex-1 gap-3">
+                        <button id="btn-revert" class="flex-1 bg-red-600 text-white py-4 rounded-2xl font-black">Persiste</button>
+                        <button id="btn-ok" class="flex-1 bg-emerald-700 text-white py-4 rounded-2xl font-black">Resolvido</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HUMOR -->
+    <div id="modal-finalize" class="glass-modal">
+        <div class="bg-white dark:bg-darkCard rounded-[40px] p-10 max-w-sm w-full text-center shadow-2xl border-b-8 border-emerald-500">
+            <h3 class="text-xl font-black mb-8 uppercase text-emerald-800 dark:text-emerald-400 italic">Etapa Concluída!</h3>
+            <div class="flex justify-center gap-4 mb-10" id="mood-options">
+                <button data-mood="😡" class="text-5xl hover:scale-125 transition-all">😡</button>
+                <button data-mood="😟" class="text-5xl hover:scale-125 transition-all">😟</button>
+                <button data-mood="😐" class="text-5xl hover:scale-125 transition-all">😐</button>
+                <button data-mood="🙂" class="text-5xl hover:scale-125 transition-all">🙂</button>
+                <button data-mood="🤩" class="text-5xl hover:scale-125 transition-all">🤩</button>
+            </div>
+            <button onclick="closeModal('modal-finalize')" class="text-slate-400 font-black uppercase text-[10px] tracking-widest">Voltar</button>
+        </div>
+    </div>
+
+    <!-- FIREBASE & LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, updateDoc, doc, onSnapshot, query, orderBy, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDIYl3EvftBBh_GMwCUFDqq95F9A1Sdaxk",
+            authDomain: "fr-controle.firebaseapp.com",
+            projectId: "fr-controle",
+            storageBucket: "fr-controle.firebasestorage.app",
+            messagingSenderId: "908559590092",
+            appId: "1:908559590092:web:79217f708629a152af1869"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const colRef = collection(db, "demandas");
+
+        // EXPORT TO WINDOW (Fix scope issues)
+        window.tickets = [];
+        window.currentTicketId = null;
+        window.activeTab = 'active';
+
+        window.switchTab = (tab) => {
+            window.activeTab = tab;
+            ['active', 'post', 'completed'].forEach(t => {
+                const btn = document.getElementById('tab-'+t);
+                if(btn) btn.className = (t === tab) ? 'tab-active py-1 px-2 uppercase text-[10px] tracking-widest font-black' : 'py-1 px-2 uppercase text-[10px] tracking-widest text-slate-400 font-bold';
+            });
+            document.getElementById('view-active').classList.toggle('hidden', tab !== 'active');
+            document.getElementById('view-post').classList.toggle('hidden', tab !== 'post');
+            document.getElementById('view-completed').classList.toggle('hidden', tab !== 'completed');
+            window.renderTickets();
+        };
+
+        window.openModal = (id) => document.getElementById(id).classList.add('active');
+        window.closeModal = (id) => { 
+            document.getElementById(id).classList.remove('active');
+            if(id === 'modal-details') window.currentTicketId = null;
+        };
+        window.closeIfBlur = (e) => { if(e.target.classList.contains('glass-modal')) window.closeModal(e.target.id); };
+
+        window.toggleDarkMode = () => {
+            const root = document.getElementById('app-root');
+            root.classList.toggle('dark');
+            const isDark = root.classList.contains('dark');
+            document.getElementById('dark-icon').className = isDark ? 'fas fa-sun text-yellow-400' : 'fas fa-moon text-emerald-600';
+            localStorage.setItem('fr_theme', isDark ? 'dark' : 'light');
+        };
+
+        function parseMarkdown(text) {
+            return text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" class="text-emerald-600 dark:text-emerald-400 underline font-black">$1</a>');
+        }
+
+        const getJsDate = (f) => f instanceof Timestamp ? f.toDate() : (f ? new Date(f) : new Date());
+
+        window.renderTickets = () => {
+            const search = document.getElementById('search-input')?.value.toLowerCase() || "";
+            const filter = document.getElementById('filter-level')?.value || "ALL";
+
+            for(let i=1; i<=5; i++) { const c = document.getElementById(`col-${i}`); if(c) c.innerHTML = ''; }
+            const postList = document.getElementById('post-list'); if(postList) postList.innerHTML = '';
+            const compList = document.getElementById('completed-list'); if(compList) compList.innerHTML = '';
+
+            const filtered = window.tickets.filter(t => 
+                (t.empresa?.toLowerCase().includes(search) || t.protocolo?.toLowerCase().includes(search)) && 
+                (filter === 'ALL' || t.nivel === filter)
+            );
+
+            if(window.activeTab === 'active') {
+                filtered.filter(t => t.statusGeral === 'active').sort((a,b) => (b.reincidente||0) - (a.reincidente||0)).forEach(t => {
+                    const diffMs = new Date() - getJsDate(t.lastUpdate);
+                    const h = Math.floor(diffMs / (1000 * 60 * 60));
+                    const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                    let sClass = t.statusSetor === 'validacao' ? 'card-validacao' : (t.statusSetor === 'suporte' ? 'card-suporte' : 'card-dependente');
+                    let sLabel = (t.statusSetor === 'cliente' || t.statusSetor === 'outros') ? `🚫 Aguard. ${t.statusSetor === 'cliente'?'Cli':'Setor'}` : (t.statusSetor === 'validacao' ? '✅ Validando' : '🛠️ Suporte');
+
+                    document.getElementById(`col-${t.stars}`).innerHTML += `
+                        <div onclick="showDetails('${t.id}')" class="p-4 rounded-3xl shadow-sm border-2 cursor-pointer transition-all ${sClass} ${h >= 4 ? 'animate-siren' : ''} ${t.reincidente?'card-reincidente':''}">
+                            <div class="flex justify-between items-start"><h4 class="font-black text-[11px] uppercase truncate w-3/4 break-word">${t.empresa}</h4><span>${t.moodIni}</span></div>
+                            <div class="mt-1 flex justify-between text-[8px] font-black opacity-60 uppercase"><span>${t.nivel} • ${t.causa}</span>${t.reincidente ? '<span class="text-red-600 font-black tracking-tighter">⚠️ REINCIDENTE</span>' : ''}</div>
+                            <div class="mt-4 border-t border-black/5 pt-2 flex justify-between items-center text-[10px] font-black italic"><span>${h}h ${m}m ocioso</span><span class="uppercase tracking-tighter opacity-80">${sLabel}</span></div>
+                        </div>`;
+                });
+            } else if(window.activeTab === 'post') {
+                const posts = filtered.filter(t => t.statusGeral === 'post');
+                if(posts.length === 0) postList.innerHTML = `<div class="col-span-full py-20 text-center"><p class="text-2xl font-black text-emerald-600">Parabéns, sem pós-atendimentos! 🤩</p></div>`;
+                else posts.forEach(t => {
+                    postList.innerHTML += `
+                        <div onclick="showDetails('${t.id}')" class="bg-white dark:bg-darkCard p-8 rounded-[40px] border-2 border-amber-100 dark:border-amber-900/30 shadow-sm cursor-pointer hover:border-amber-500 transition-all">
+                            <h3 class="text-md font-black uppercase break-word">${t.empresa}</h3>
+                            <p class="text-[10px] text-amber-500 font-black uppercase mt-2 italic tracking-widest">Aguardando Validação</p>
+                            <button class="w-full mt-6 py-4 bg-amber-500 text-white rounded-2xl text-[10px] font-black uppercase shadow-lg">Validar Retorno</button>
+                        </div>`;
+                });
+            } else {
+                filtered.filter(t => t.statusGeral === 'completed').sort((a,b) => getJsDate(b.fullyCompletedAt) - getJsDate(a.fullyCompletedAt)).forEach(t => {
+                    const dur = Math.round((getJsDate(t.finishedAt) - getJsDate(t.createdAt)) / (1000 * 60));
+                    compList.innerHTML += `
+                        <tr class="border-b dark:border-slate-800 text-[11px] hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer" onclick="showDetails('${t.id}')">
+                            <td class="p-6 font-bold uppercase">${t.empresa}<br><span class="opacity-40 font-mono text-[9px]">ID: ${t.protocolo}</span></td>
+                            <td class="p-6 font-medium opacity-70">${t.causa}</td>
+                            <td class="p-6 text-center">${t.moodIni} → ${t.moodFinal}</td>
+                            <td class="p-6 font-bold text-emerald-700">${dur}m</td>
+                            <td class="p-6 opacity-50 font-bold uppercase text-[9px]">${getJsDate(t.fullyCompletedAt).toLocaleDateString()}</td>
+                        </tr>`;
+                });
+            }
+            window.updateStats();
+        };
+
+        window.updateStats = () => {
+            const act = window.tickets.filter(t => t.statusGeral === 'active');
+            const post = window.tickets.filter(t => t.statusGeral === 'post');
+            const comp = window.tickets.filter(t => t.statusGeral === 'completed');
+            const noUp = act.filter(t => (new Date() - getJsDate(t.lastUpdate)) / (1000 * 60 * 60) >= 4);
+            const rein = act.filter(t => t.reincidente);
+
+            document.getElementById('count-active').innerText = act.length;
+            document.getElementById('count-post').innerText = post.length;
+            document.getElementById('count-no-update').innerText = noUp.length;
+            document.getElementById('count-reincidente').innerText = rein.length;
+            document.getElementById('total-completed-counter').innerText = comp.length;
+
+            const updateKPIStyle = (id, count) => {
+                const box = document.getElementById('kpi-'+id);
+                if(!box) return;
+                box.className = count > 0 ? "bg-white dark:bg-darkCard p-4 rounded-3xl border-2 border-red-500 shadow-sm flex items-center gap-4 animate-pulse" : "bg-white dark:bg-darkCard p-4 rounded-3xl border dark:border-slate-800 shadow-sm flex items-center gap-4";
+                const icon = document.getElementById('kpi-'+id+'-icon');
+                if(icon) icon.className = count > 0 ? "w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center font-black" : "w-12 h-12 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center font-black";
+            };
+            updateKPIStyle('no-update', noUp.length);
+            updateKPIStyle('reincidente', rein.length);
+
+            if(comp.length > 0) {
+                const total = comp.reduce((acc, t) => acc + ((getJsDate(t.finishedAt) - getJsDate(t.createdAt)) / (1000 * 60)), 0);
+                document.getElementById('tme-value').innerText = Math.round(total / comp.length);
+            }
+        };
+
+        // RENDER DETAILS WITHOUT CLOSING
+        window.renderDetailsContent = () => {
+            const t = window.tickets.find(x => x.id === window.currentTicketId);
+            if(!t) return;
+            document.getElementById('det-empresa').innerText = t.empresa;
+            document.getElementById('det-nivel').innerText = t.nivel;
+            document.getElementById('det-cliente-contato').innerText = `${t.cliente} | ${t.contato}`;
+            document.getElementById('det-protocolo-causa').innerText = `${t.protocolo} | ${t.causa}`;
+            document.getElementById('det-problema').innerText = t.problema;
+            
+            const bar = document.getElementById('action-bar-details');
+            const edit = document.getElementById('btn-edit-trigger');
+            const sBox = document.getElementById('status-setor-container');
+            
+            if(t.statusGeral === 'active') {
+                bar.classList.remove('hidden'); sBox.classList.remove('hidden'); edit.classList.remove('hidden');
+                document.getElementById('det-status-setor').value = t.statusSetor;
+                document.getElementById('btn-final-tec').classList.remove('hidden'); document.getElementById('btn-group-post').classList.add('hidden');
+            } else if(t.statusGeral === 'post') {
+                bar.classList.remove('hidden'); sBox.classList.add('hidden'); edit.classList.remove('hidden');
+                document.getElementById('btn-final-tec').classList.add('hidden'); document.getElementById('btn-group-post').classList.remove('hidden');
+            } else {
+                bar.classList.add('hidden'); sBox.classList.add('hidden'); edit.classList.add('hidden');
+            }
+            document.getElementById('updates-list').innerHTML = (t.updates || []).map(u => `<div class="mb-4 border-b border-black/5 dark:border-white/5 pb-2"><p class="text-[8px] opacity-40 font-black uppercase tracking-tighter">${u.time}</p><p class="text-xs font-medium break-word">${parseMarkdown(u.text)}</p></div>`).join('');
+        };
+
+        window.showDetails = (id) => {
+            window.currentTicketId = id;
+            window.renderDetailsContent();
+            window.openModal('modal-details');
+        };
+
+        // HANDLERS
+        document.getElementById('btn-login').onclick = () => {
+            if(document.getElementById('login-user').value === 'admin' && document.getElementById('login-pass').value === 'F@bricio321') {
+                sessionStorage.setItem('fr_logged', 'true');
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                onSnapshot(query(colRef, orderBy("createdAt", "desc")), (s) => {
+                    window.tickets = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    window.renderTickets();
+                    if(window.currentTicketId) window.renderDetailsContent();
+                });
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        };
+
+        window.handleLogout = () => { sessionStorage.removeItem('fr_logged'); window.location.reload(); };
+
+        window.prepareNewTicket = () => {
+            ['in-empresa', 'in-cliente', 'in-contato', 'in-protocolo', 'in-causa', 'in-problema'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('modal-title').innerText = "Nova Demanda";
+            window.currentTicketId = null; window.openModal('modal-add');
+        };
+
+        document.getElementById('btn-save').onclick = async () => {
+            const data = {
+                empresa: document.getElementById('in-empresa').value, cliente: document.getElementById('in-cliente').value,
+                contato: document.getElementById('in-contato').value, protocolo: document.getElementById('in-protocolo').value,
+                nivel: document.getElementById('in-nivel').value, causa: document.getElementById('in-causa').value,
+                problema: document.getElementById('in-problema').value, stars: parseInt(document.getElementById('in-stars').value),
+                moodIni: document.getElementById('in-mood').value, lastUpdate: serverTimestamp()
+            };
+            if(!data.empresa) return alert("Erro: Empresa vazia.");
+            if(window.currentTicketId) await updateDoc(doc(db, "demandas", window.currentTicketId), data);
+            else {
+                if(window.tickets.find(t => t.protocolo === data.protocolo && t.statusGeral !== 'completed')) if(!confirm("Protocolo duplicado. Abrir mesmo assim?")) return;
+                await addDoc(colRef, { ...data, statusGeral: 'active', statusSetor: 'suporte', reincidente: false, createdAt: serverTimestamp(), updates: [{ time: new Date().toLocaleString(), text: "Iniciado." }] });
+            }
+            window.closeModal('modal-add');
+        };
+
+        document.getElementById('btn-comment').onclick = async () => {
+            const txt = document.getElementById('new-update-text');
+            if(!txt.value) return;
+            const t = window.tickets.find(x => x.id === window.currentTicketId);
+            const upds = [{ time: new Date().toLocaleString(), text: txt.value }, ...(t.updates || [])];
+            await updateDoc(doc(db, "demandas", t.id), { updates: upds, lastUpdate: serverTimestamp() });
+            txt.value = '';
+        };
+
+        document.getElementById('det-status-setor').onchange = async (e) => {
+            await updateDoc(doc(db, "demandas", window.currentTicketId), { statusSetor: e.target.value, lastUpdate: serverTimestamp() });
+        };
+
+        document.getElementById('mood-options').onclick = async (e) => {
+            const mood = e.target.dataset.mood; if(!mood) return;
+            const t = window.tickets.find(x => x.id === window.currentTicketId);
+            const isPost = t.stars >= 4;
+            await updateDoc(doc(db, "demandas", t.id), { moodFinal: mood, finishedAt: serverTimestamp(), statusGeral: isPost ? 'post' : 'completed', fullyCompletedAt: isPost ? null : serverTimestamp(), lastUpdate: serverTimestamp() });
+            window.closeModal('modal-finalize'); window.closeModal('modal-details');
+        };
+
+        document.getElementById('btn-ok').onclick = async () => {
+            await updateDoc(doc(db, "demandas", window.currentTicketId), { statusGeral: 'completed', fullyCompletedAt: serverTimestamp(), lastUpdate: serverTimestamp() });
+            window.closeModal('modal-details');
+        };
+
+        document.getElementById('btn-revert').onclick = async () => {
+            const t = window.tickets.find(x => x.id === window.currentTicketId);
+            const upds = [{ time: new Date().toLocaleString(), text: "⚠️ REINCIDENTE: Persiste." }, ...(t.updates || [])];
+            await updateDoc(doc(db, "demandas", t.id), { statusGeral: 'active', statusSetor: 'suporte', reincidente: true, lastUpdate: serverTimestamp(), updates: upds });
+            window.closeModal('modal-details');
+        };
+
+        document.getElementById('btn-edit-trigger').onclick = () => {
+            const t = window.tickets.find(x => x.id === window.currentTicketId);
+            document.getElementById('modal-title').innerText = "Editar";
+            document.getElementById('in-empresa').value = t.empresa; document.getElementById('in-cliente').value = t.cliente;
+            document.getElementById('in-contato').value = t.contato; document.getElementById('in-protocolo').value = t.protocolo;
+            document.getElementById('in-nivel').value = t.nivel; document.getElementById('in-causa').value = t.causa;
+            document.getElementById('in-problema').value = t.problema; document.getElementById('in-stars').value = t.stars;
+            document.getElementById('in-mood').value = t.moodIni;
+            window.openModal('modal-add');
+        };
+
+        document.getElementById('btn-dark').onclick = window.toggleDarkMode;
+
+        window.onload = () => {
+            if(localStorage.getItem('fr_theme') === 'dark') window.toggleDarkMode();
+            if(sessionStorage.getItem('fr_logged') === 'true') {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                onSnapshot(query(colRef, orderBy("createdAt", "desc")), (s) => {
+                    window.tickets = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    window.renderTickets();
+                    if(window.currentTicketId) window.renderDetailsContent();
+                });
+            }
+            setInterval(window.renderTickets, 30000);
+        };
+    </script>
+</body>
+</html>
