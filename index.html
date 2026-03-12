@@ -432,7 +432,7 @@ const UPLOAD_PRESET = "fr_controle";
 
         // --- HANDLERS (FIREBASE) ---
         document.getElementById('btn-login-action').onclick = () => {
-            if(document.getElementById('login-user').value === 'admin' && document.getElementById('login-pass').value === 'F@bricio321') {
+            if(document.getElementById('login-user').value === 'admin' && document.getElementById('login-pass').value === 'admin') {
                 sessionStorage.setItem('fr_logged', 'true');
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
