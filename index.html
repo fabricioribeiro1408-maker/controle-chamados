@@ -82,7 +82,6 @@
                         <button onclick="setNivelFilter('N2')" class="nivel-filter-btn px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all text-slate-400" data-filter="N2">N2</button>
                         <button onclick="setNivelFilter('N3')" class="nivel-filter-btn px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tighter transition-all text-slate-400" data-filter="N3">N3</button>
                     </div>
-
                     <select id="user-filter" onchange="setUserFilter(this.value)" class="bg-slate-100 dark:bg-slate-800 border-none rounded-xl py-2 px-3 text-[10px] font-black uppercase outline-none focus:ring-2 ring-emerald-500 cursor-pointer">
                         <option value="all">Todos os Funcionários</option>
                     </select>
@@ -90,15 +89,12 @@
 
                 <div class="flex items-center gap-3">
                     <input type="text" id="search-input" oninput="renderTickets()" placeholder="Pesquisar..." class="bg-slate-100 dark:bg-slate-800 border-none rounded-xl py-2 px-4 text-xs focus:ring-2 ring-emerald-500 outline-none w-48 font-bold">
-                    
                     <button onclick="openChat()" class="relative bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 p-2.5 rounded-xl hover:bg-emerald-100 transition-all">
                         <i class="fas fa-envelope"></i>
                         <div id="chat-notify" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] flex items-center justify-center rounded-full font-bold animate-notify">!</div>
                     </button>
-
                     <button id="btn-admin-users" onclick="openUsersManager()" class="hidden bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 p-2.5 rounded-xl hover:bg-emerald-100 transition-all"><i class="fas fa-users-cog"></i></button>
                     <button onclick="prepareNewTicket()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-black shadow-lg text-xs uppercase tracking-tighter">Novo</button>
-                    
                     <div class="flex items-center gap-2 border-l pl-3 dark:border-slate-800">
                         <div class="text-right hidden sm:block">
                             <p id="header-user-name" class="text-[10px] font-black uppercase text-emerald-600 leading-none"></p>
@@ -108,14 +104,12 @@
                             <i class="fas fa-user text-emerald-600"></i>
                         </button>
                     </div>
-
                     <button onclick="handleLogout()" class="text-slate-400 hover:text-red-500 p-2"><i class="fas fa-power-off"></i></button>
                 </div>
             </div>
         </header>
 
         <main class="p-6 max-w-[1800px] mx-auto">
-            <!-- KPIs -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 <div class="bg-white dark:bg-darkCard p-4 rounded-3xl border dark:border-slate-800 shadow-sm flex items-center gap-4">
                     <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-2xl flex items-center justify-center font-black text-xl">A</div>
@@ -221,7 +215,13 @@
         <div class="bg-white dark:bg-darkCard w-full max-w-xl h-full shadow-2xl p-8 overflow-y-auto relative" onclick="event.stopPropagation()">
             <div id="upload-status" class="hidden absolute top-0 left-0 w-full bg-emerald-500 text-white text-[10px] font-black p-2 text-center z-50">ENVIANDO...</div>
             <div class="flex justify-between items-start mb-4">
-                <div><span id="det-nivel" class="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest"></span><h2 id="det-empresa" class="text-2xl font-black text-slate-900 dark:text-white mt-4 leading-tight uppercase italic tracking-tighter"></h2></div>
+                <div>
+                    <span id="det-nivel" class="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest"></span>
+                    <div class="flex items-center gap-3 mt-4">
+                        <h2 id="det-empresa" class="text-2xl font-black text-slate-900 dark:text-white leading-tight uppercase italic tracking-tighter"></h2>
+                        <button onclick="prepareEditTicket()" class="text-slate-300 hover:text-emerald-500 transition-all text-lg"><i class="fas fa-edit"></i></button>
+                    </div>
+                </div>
                 <button onclick="closeModal('modal-details')" class="text-slate-300 hover:text-red-500 p-2 text-3xl"><i class="fas fa-times"></i></button>
             </div>
             <div class="grid grid-cols-2 gap-3 mb-6">
@@ -250,7 +250,7 @@
         </div>
     </div>
 
-    <!-- MODAL NOVO -->
+    <!-- MODAL NOVO / EDITAR -->
     <div id="modal-add" class="glass-modal" onclick="closeIfBlur(event)">
         <div class="bg-white dark:bg-darkCard w-full max-w-2xl rounded-[40px] p-8 shadow-2xl overflow-y-auto max-h-[90vh]" onclick="event.stopPropagation()">
             <h2 id="modal-title" class="text-2xl font-black text-emerald-800 dark:text-emerald-400 mb-6 uppercase italic tracking-tighter">Registrar Demanda</h2>
@@ -314,7 +314,6 @@
         window.userFilter = 'all'; 
         window.selectedChatUser = null;
 
-        // --- PRESENÇA ---
         async function setPresence(status) {
             const uid = sessionStorage.getItem('fr_userId');
             if(uid) await updateDoc(doc(db, "usuarios", uid), { status: status });
@@ -322,7 +321,6 @@
 
         window.addEventListener('beforeunload', () => setPresence('offline'));
 
-        // LOGIN
         document.getElementById('btn-login-action').onclick = async () => {
             const userVal = document.getElementById('login-user').value;
             const passVal = document.getElementById('login-pass').value;
@@ -365,7 +363,6 @@
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
             if(sessionStorage.getItem('fr_role') === 'admin') document.getElementById('btn-admin-users').classList.remove('hidden');
-            
             setPresence('online');
             updateHeaderProfile();
 
@@ -398,7 +395,6 @@
             window.location.reload(); 
         };
 
-        // PERFIL
         window.openProfile = async () => {
             const uid = sessionStorage.getItem('fr_userId');
             const userDoc = await getDoc(doc(db, "usuarios", uid));
@@ -439,7 +435,6 @@
             closeModal('modal-profile');
         };
 
-        // FILTROS
         window.setNivelFilter = (nivel) => {
             window.nivelFilter = nivel;
             document.querySelectorAll('.nivel-filter-btn').forEach(btn => {
@@ -454,19 +449,15 @@
             window.renderTickets();
         };
 
-        // --- CHAT REAL-TIME ---
         let chatListUnsubscribe = null;
         window.openChat = async () => {
             openModal('modal-chat');
             const list = document.getElementById('chat-users-list');
             const myId = sessionStorage.getItem('fr_userId');
-
             if(chatListUnsubscribe) chatListUnsubscribe();
-
             chatListUnsubscribe = onSnapshot(usersRef, async (snap) => {
                 const unreadSnap = await getDocs(query(chatRef, where("toId", "==", myId), where("read", "==", false)));
                 const unreadSenders = unreadSnap.docs.map(d => d.data().fromId);
-
                 list.innerHTML = snap.docs.filter(d => d.id !== myId).map(d => {
                     const u = d.data();
                     const isOnline = u.status === 'online';
@@ -474,7 +465,6 @@
                     const hasUnread = unreadSenders.includes(d.id);
                     const nomes = u.nome.split(' ');
                     const displayNome = nomes[0] + (nomes[1] ? ' ' + nomes[1] : '');
-                    
                     return `<div onclick="selectChatUser('${d.id}', '${displayNome}')" 
                         class="p-4 rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all flex items-center justify-between border-2 ${isSelected ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-md' : 'border-transparent'}">
                         <div class="flex items-center gap-3">
@@ -495,7 +485,6 @@
             document.getElementById('chat-header').innerHTML = `<p class="font-black uppercase text-xs text-emerald-600 italic">Chat com: ${nome}</p>`;
             document.getElementById('chat-input-area').classList.remove('hidden');
             loadMessages();
-            // Atualiza a lista para aplicar a borda imediatamente
             window.openChat();
         };
 
@@ -504,13 +493,10 @@
             if(!window.selectedChatUser) return;
             const myId = sessionStorage.getItem('fr_userId');
             const box = document.getElementById('chat-messages');
-
             if(messagesUnsubscribe) messagesUnsubscribe();
-
             messagesUnsubscribe = onSnapshot(query(chatRef, orderBy("createdAt", "asc")), (snap) => {
                 const msgs = snap.docs.map(d => ({id: d.id, ...d.data()}))
                     .filter(m => (m.fromId === myId && m.toId === window.selectedChatUser) || (m.fromId === window.selectedChatUser && m.toId === myId));
-                
                 box.innerHTML = msgs.map(m => {
                     const isMe = m.fromId === myId;
                     if(!isMe && !m.read) updateDoc(doc(db, "mensagens", m.id), { read: true });
@@ -543,18 +529,15 @@
             input.value = '';
         };
 
-        // TICKETS
         window.renderTickets = () => {
             checkSession(); 
             const search = document.getElementById('search-input')?.value.toLowerCase() || "";
             for(let i=1; i<=5; i++) { const c = document.getElementById(`col-${i}`); if(c) c.innerHTML = ''; }
             const postList = document.getElementById('post-list'); if(postList) postList.innerHTML = '';
             const compList = document.getElementById('completed-list'); if(compList) compList.innerHTML = '';
-
             let filtered = window.tickets.filter(t => (t.empresa?.toLowerCase().includes(search) || t.protocolo?.toLowerCase().includes(search)));
             if(window.nivelFilter !== 'all') { filtered = filtered.filter(t => t.nivel === window.nivelFilter); }
             if(window.userFilter !== 'all') { filtered = filtered.filter(t => t.criadoPor === window.userFilter); }
-
             if(window.activeTab === 'active') {
                 filtered.filter(t => t.statusGeral === 'active').forEach(t => {
                     const lastComm = getJsDate(t.lastCommentAt || t.createdAt);
@@ -613,7 +596,7 @@
             document.getElementById(id).classList.remove('active'); 
             if(id === 'modal-details') window.currentTicketId = null; 
             if(id === 'modal-chat') {
-                window.selectedChatUser = null; // --- CORREÇÃO: LIMPA AO FECHAR ---
+                window.selectedChatUser = null; 
                 if(chatListUnsubscribe) chatListUnsubscribe();
                 if(messagesUnsubscribe) messagesUnsubscribe();
                 document.getElementById('chat-header').innerHTML = `<p class="font-black uppercase text-xs text-slate-400">Selecione um contato</p>`;
@@ -652,6 +635,7 @@
         window.renderDetailsContent = () => {
             const t = window.tickets.find(x => x.id === window.currentTicketId);
             if(!t) return;
+            const currentUserName = sessionStorage.getItem('fr_userName');
             document.getElementById('det-empresa').innerText = t.empresa;
             document.getElementById('det-nivel').innerText = t.nivel;
             document.getElementById('det-cliente-contato').innerText = `${t.cliente} | ${t.contato}`;
@@ -662,18 +646,89 @@
             if(t.statusGeral === 'active') { bar.classList.remove('hidden'); document.getElementById('det-status-setor').value = t.statusSetor; document.getElementById('btn-final-tec').classList.remove('hidden'); document.getElementById('btn-group-post').classList.add('hidden'); } 
             else if(t.statusGeral === 'post') { bar.classList.remove('hidden'); document.getElementById('btn-final-tec').classList.add('hidden'); document.getElementById('btn-group-post').classList.remove('hidden'); } 
             else { bar.classList.add('hidden'); }
-            document.getElementById('updates-list').innerHTML = (t.updates || []).map(u => `<div class="text-[10px] py-1 border-b dark:border-slate-800 text-slate-600 dark:text-slate-400"><span class="opacity-40 font-mono">[${u.time}]</span><span class="font-black text-emerald-600 dark:text-emerald-400 uppercase ml-1">${u.autor || 'SISTEMA'}:</span><span class="ml-1">${parseMarkdown(u.text)}</span></div>`).join('');
+            
+            document.getElementById('updates-list').innerHTML = (t.updates || []).map((u, idx) => {
+                const isAuthor = u.autor === currentUserName;
+                return `
+                <div class="group relative text-[10px] py-2 border-b dark:border-slate-800 text-slate-600 dark:text-slate-400">
+                    <span class="opacity-40 font-mono">[${u.time}]</span>
+                    <span class="font-black text-emerald-600 dark:text-emerald-400 uppercase ml-1">${u.autor || 'SISTEMA'}:</span>
+                    <span class="ml-1">${parseMarkdown(u.text)}</span>
+                    ${u.edited ? '<span class="ml-2 text-[8px] font-black italic opacity-50 uppercase">(editado)</span>' : ''}
+                    ${isAuthor ? `<button onclick="editComment(${idx})" class="ml-4 opacity-0 group-hover:opacity-100 text-emerald-500 hover:underline font-black uppercase text-[8px]">Editar</button>` : ''}
+                </div>`;
+            }).join('');
+        };
+
+        window.editComment = async (idx) => {
+            const t = window.tickets.find(x => x.id === window.currentTicketId);
+            const currentUpdate = t.updates[idx];
+            const newText = prompt("Editar comentário:", currentUpdate.text);
+            if(newText !== null && newText !== "" && newText !== currentUpdate.text) {
+                const newUpdates = [...t.updates];
+                newUpdates[idx] = { ...currentUpdate, text: newText, edited: true };
+                await updateDoc(doc(db, "demandas", window.currentTicketId), { updates: newUpdates });
+            }
+        };
+
+        window.prepareEditTicket = () => {
+            const t = window.tickets.find(x => x.id === window.currentTicketId);
+            document.getElementById('modal-title').innerText = "Editar Chamado";
+            document.getElementById('in-empresa').value = t.empresa;
+            document.getElementById('in-cliente').value = t.cliente;
+            document.getElementById('in-contato').value = t.contato;
+            document.getElementById('in-protocolo').value = t.protocolo;
+            document.getElementById('in-causa').value = t.causa;
+            document.getElementById('in-problema').value = t.problema;
+            document.getElementById('in-nivel').value = t.nivel;
+            document.getElementById('in-stars').value = t.stars;
+            document.getElementById('in-mood').value = t.moodIni;
+            openModal('modal-add');
         };
 
         window.showDetails = (id) => { window.currentTicketId = id; window.renderDetailsContent(); openModal('modal-details'); };
 
-        window.prepareNewTicket = () => { ['in-empresa', 'in-cliente', 'in-contato', 'in-protocolo', 'in-causa', 'in-problema'].forEach(id => document.getElementById(id).value = ''); window.currentTicketId = null; openModal('modal-add'); };
+        window.prepareNewTicket = () => { 
+            document.getElementById('modal-title').innerText = "Registrar Demanda";
+            ['in-empresa', 'in-cliente', 'in-contato', 'in-protocolo', 'in-causa', 'in-problema'].forEach(id => document.getElementById(id).value = ''); 
+            window.currentTicketId = null; 
+            openModal('modal-add'); 
+        };
 
         document.getElementById('btn-save').onclick = async () => {
             const aut = sessionStorage.getItem('fr_userName');
-            const data = { empresa: document.getElementById('in-empresa').value, cliente: document.getElementById('in-cliente').value, contato: document.getElementById('in-contato').value, protocolo: document.getElementById('in-protocolo').value, nivel: document.getElementById('in-nivel').value, causa: document.getElementById('in-causa').value, problema: document.getElementById('in-problema').value, stars: parseInt(document.getElementById('in-stars').value), moodIni: document.getElementById('in-mood').value, lastUpdate: serverTimestamp(), lastCommentAt: serverTimestamp(), criadoPor: aut, statusGeral: 'active', statusSetor: 'suporte', reincidente: false, createdAt: serverTimestamp(), updates: [{ time: new Date().toLocaleString(), text: "Demanda Iniciada.", autor: aut }] };
+            const data = { 
+                empresa: document.getElementById('in-empresa').value, 
+                cliente: document.getElementById('in-cliente').value, 
+                contato: document.getElementById('in-contato').value, 
+                protocolo: document.getElementById('in-protocolo').value, 
+                nivel: document.getElementById('in-nivel').value, 
+                causa: document.getElementById('in-causa').value, 
+                problema: document.getElementById('in-problema').value, 
+                stars: parseInt(document.getElementById('in-stars').value), 
+                moodIni: document.getElementById('in-mood').value, 
+                lastUpdate: serverTimestamp()
+            };
             if(!data.empresa) return alert("Empresa obrigatória");
-            await addDoc(colRef, data); closeModal('modal-add');
+
+            if(window.currentTicketId) {
+                // Modo Edição
+                await updateDoc(doc(db, "demandas", window.currentTicketId), data);
+            } else {
+                // Modo Novo
+                const newData = { 
+                    ...data,
+                    lastCommentAt: serverTimestamp(), 
+                    criadoPor: aut, 
+                    statusGeral: 'active', 
+                    statusSetor: 'suporte', 
+                    reincidente: false, 
+                    createdAt: serverTimestamp(), 
+                    updates: [{ time: new Date().toLocaleString(), text: "Demanda Iniciada.", autor: aut }] 
+                };
+                await addDoc(colRef, newData);
+            }
+            closeModal('modal-add');
         };
 
         document.getElementById('btn-comment').onclick = async () => {
